@@ -23,11 +23,13 @@ public class HaqqExplorerHandler extends AbilityBot {
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
   private final String apiHost;
+  private final String rpcHost;
   private final HttpClient client;
 
-  public HaqqExplorerHandler(String botToken, String botUsername, String apiHost) {
+  public HaqqExplorerHandler(String botToken, String botUsername, String apiHost, String rpcHost) {
     super(botToken, botUsername);
     this.apiHost = apiHost;
+    this.rpcHost = rpcHost;
     this.client = HttpClients.createDefault();
   }
 
@@ -36,22 +38,22 @@ public class HaqqExplorerHandler extends AbilityBot {
     return Ability
         .builder()
         .name("show_active")
-        .info("says hello world!")
+        .locality(ALL)
         .privacy(PUBLIC)
         .action(ctx -> {
           String url = apiHost + "/staking/validators?status=BOND_STATUS_BONDED";
           HttpGet request = new HttpGet(url);
           JsonNode response = execute(request);
-          List<ValidatorRow> validators = new ArrayList<>();
+          List<ValidatorRowResponse> validators = new ArrayList<>();
           response.get("result").elements().forEachRemaining(v -> {
             String moniker = v.get("description").get("moniker").asText();
             String tokens = new BigInteger(v.get("tokens").asText())
                 .divide(new BigInteger("1000000000000000000"))
                 .toString();
-            validators.add(new ValidatorRow(moniker, tokens));
+            validators.add(new ValidatorRowResponse(moniker, tokens));
           });
 
-          for (List<ValidatorRow> validatorBatch : Lists.partition(validators, 50)) {
+          for (List<ValidatorRowResponse> validatorBatch : Lists.partition(validators, 50)) {
             String message = validatorBatch
                 .stream()
                 .map(String::valueOf)
@@ -69,25 +71,29 @@ public class HaqqExplorerHandler extends AbilityBot {
         .locality(ALL)
         .privacy(PUBLIC)
         .action(ctx -> {
-          String url = apiHost + "/staking/validators?status=BOND_STATUS_BONDED";
+          String txHash = ctx.arguments()[0];
+          String url = apiHost + "/cosmos/tx/v1beta1/txs/" + txHash;
           HttpGet request = new HttpGet(url);
           JsonNode response = execute(request);
-          List<ValidatorRow> validators = new ArrayList<>();
-          response.get("result").elements().forEachRemaining(v -> {
-            String moniker = v.get("description").get("moniker").asText();
-            String tokens = new BigInteger(v.get("tokens").asText())
-                .divide(new BigInteger("1000000000000000000"))
-                .toString();
-            validators.add(new ValidatorRow(moniker, tokens));
-          });
-
-          for (List<ValidatorRow> validatorBatch : Lists.partition(validators, 50)) {
-            String message = validatorBatch
+          final String message;
+          if (response.has("code")) {
+            message = "tx hash not found";
+          } else {
+            JsonNode messages = response.get("tx").get("body").get("messages");
+             message = Lists
+                .newArrayList(messages)
                 .stream()
-                .map(String::valueOf)
-                .collect(Collectors.joining("\n"));
-            silent.send(message, ctx.chatId());
+                .map(m -> Lists
+                    .newArrayList(m.fieldNames())
+                    .stream()
+                    .map(p -> p + " -> " + m.get(p).asText())
+                    .collect(Collectors.joining("\n"))
+                )
+                .collect(Collectors.joining());
           }
+
+
+          silent.send(message, ctx.chatId());
         })
         .build();
   }

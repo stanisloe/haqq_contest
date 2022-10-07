@@ -13,7 +13,7 @@ public class Main {
       TelegramBotsApi telegramBotsApi = new TelegramBotsApi(DefaultBotSession.class);
       telegramBotsApi.registerBot(new HaqqExplorerHandler(
           "5676473997:AAF_BU_IN25ZnInXmGfjbTWUxYtsWdtHN5M", "HaqqExplorerBot",
-          "https://haqq-t.api.manticore.team"
+          "https://haqq-t.api.manticore.team", "https://haqq-t.rpc.manticore.team"
       ));
     } catch (Exception e) {
       System.out.println("Failed to register bot" + e);
