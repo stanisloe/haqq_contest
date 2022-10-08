@@ -5,18 +5,17 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
 public class Main {
 
-
-
   public static void main(String[] args) {
 
     try {
       TelegramBotsApi telegramBotsApi = new TelegramBotsApi(DefaultBotSession.class);
       telegramBotsApi.registerBot(new HaqqExplorerHandler(
           "5676473997:AAF_BU_IN25ZnInXmGfjbTWUxYtsWdtHN5M", "HaqqExplorerBot",
-          "https://haqq-t.api.manticore.team", "https://haqq-t.rpc.manticore.team"
+          "https://haqq-t.api.manticore.team", "https://haqq-t.rpc.manticore.team",
+          105026306
       ));
     } catch (Exception e) {
-      System.out.println("Failed to register bot" + e);
+      System.out.println("Failed to register bot");
     }
   }
 
