@@ -1,6 +1,7 @@
 package com.stanislove.haqq.explorer.bot;
 
 import static com.stanislove.haqq.explorer.bot.Command.SHOW_ACTIVE_VALIDATORS;
+import static com.stanislove.haqq.explorer.bot.Command.SHOW_INACTIVE_VALIDATORS;
 import static com.stanislove.haqq.explorer.bot.Command.SHOW_TX_INFO;
 import static com.stanislove.haqq.explorer.bot.Command.SHOW_VALIDATOR_INFO;
 import static org.telegram.abilitybots.api.util.AbilityUtils.getChatId;
@@ -12,7 +13,6 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -82,42 +82,54 @@ public class HaqqExplorerHandler extends AbilityBot {
   public Reply showActiveValidators() {
     return Reply
         .of(
-            (bot, u) -> {
-              String url = apiHost + "/staking/validators?status=BOND_STATUS_BONDED";
-              HttpGet request = new HttpGet(url);
-              JsonNode response = httpRequest(request);
-              List<ValidatorRowResponse> validators = Lists
-                  .newArrayList(response.get("result").elements())
-                  .stream()
-                  .map(n -> {
-                    String moniker = n.get("description").get("moniker").asText();
-                    String tokens = new BigInteger(n.get("tokens").asText())
-                        .divide(ISLM_DENOM)
-                        .toString();
-                    return new ValidatorRowResponse(
-                        new NameAndValue("Moniker", moniker),
-                        new NameAndValue("Delegation, ISLM", tokens)
-                    );
-                  })
-                  .sorted((v1, v2) ->
-                      new BigInteger(v2.getTokens().getValue())
-                          .compareTo(new BigInteger(v1.getTokens().getValue()))
-                  )
-                  .collect(Collectors.toList());
-
-              Lists.partition(validators, 50).forEach(batch -> {
-                String message = batch
-                    .stream()
-                    .map(String::valueOf)
-                    .collect(Collectors.joining("\n\n"));
-                silent.send(message, getChatId(u));
-              });
-
-              sendMainMenuMessage(u);
-            },
+            (bot, u) -> sendValidators(u, "BOND_STATUS_BONDED"),
             u -> isUpdateFor(u, SHOW_ACTIVE_VALIDATORS)
         )
         .enableStats("Show Active validators");
+  }
+
+  public Reply showInActiveValidators() {
+    return Reply
+        .of(
+            (bot, u) -> sendValidators(u, "BOND_STATUS_UNBONDED"),
+            u -> isUpdateFor(u, SHOW_INACTIVE_VALIDATORS)
+        )
+        .enableStats("Show Active validators");
+  }
+
+  private void sendValidators(Update u, String status) {
+    silent.send("Validators", getChatId(u));
+    String url = apiHost + "/staking/validators?status=" + status;
+    HttpGet request = new HttpGet(url);
+    JsonNode response = httpRequest(request);
+    List<ValidatorRowResponse> validators = Lists
+        .newArrayList(response.get("result").elements())
+        .stream()
+        .map(n -> {
+          String valoper = n.get("operator_address").asText();
+          String tokens = new BigInteger(n.get("tokens").asText())
+              .divide(ISLM_DENOM)
+              .toString();
+          return new ValidatorRowResponse(
+              new NameAndValue("Validator Address", valoper),
+              new NameAndValue("Delegation, ISLM", tokens)
+          );
+        })
+        .sorted((v1, v2) ->
+            new BigInteger(v2.getTokens().getValue())
+                .compareTo(new BigInteger(v1.getTokens().getValue()))
+        )
+        .collect(Collectors.toList());
+
+    Lists.partition(validators, 25).forEach(batch -> {
+      String message = batch
+          .stream()
+          .map(String::valueOf)
+          .collect(Collectors.joining("\n\n"));
+      silent.send(message, getChatId(u));
+    });
+
+    sendMainMenuMessage(u);
   }
 
   public Reply showTxInfo() {
@@ -129,13 +141,14 @@ public class HaqqExplorerHandler extends AbilityBot {
         .onlyIf(u -> isUpdateFor(u, SHOW_TX_INFO))
         .next(Reply
             .of((b, u) -> {
+              silent.send(SHOW_TX_INFO.getText(), getChatId(u));
               String txHash = u.getMessage().getText();
               String url = apiHost + "/cosmos/tx/v1beta1/txs/" + txHash;
               HttpGet request = new HttpGet(url);
               JsonNode response = httpRequest(request);
               final String message;
               if (response.has("code")) {
-                message = "tx hash not found";
+                message = "Tx hash not found";
               } else {
                 JsonNode messages = response.get("tx").get("body").get("messages");
                 message = Lists
@@ -166,13 +179,14 @@ public class HaqqExplorerHandler extends AbilityBot {
         .onlyIf(u -> isUpdateFor(u, SHOW_VALIDATOR_INFO))
         .next(Reply
             .of((b, u) -> {
+              silent.send(SHOW_VALIDATOR_INFO.getText(), getChatId(u));
               String valoperAddress = u.getMessage().getText();
               String url = apiHost + "/staking/validators/" + valoperAddress;
               HttpGet request = new HttpGet(url);
               JsonNode response = httpRequest(request);
               final String message;
               if (response.has("error")) {
-                message = "validator not found";
+                message = "Validator not found";
               } else {
                 JsonNode result = response.get("result");
                 JsonNode description = result.get("description");

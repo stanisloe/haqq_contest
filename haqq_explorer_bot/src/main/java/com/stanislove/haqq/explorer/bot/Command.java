@@ -2,6 +2,7 @@ package com.stanislove.haqq.explorer.bot;
 
 public enum Command {
   SHOW_ACTIVE_VALIDATORS("Show Active Validators", "show_active_validators"),
+  SHOW_INACTIVE_VALIDATORS("Show Inactive Validators", "show_in_active_validators"),
   SHOW_TX_INFO("Show tx info", "show_tx_info"),
   SHOW_VALIDATOR_INFO("Show validator info", "show_validator_info");
 

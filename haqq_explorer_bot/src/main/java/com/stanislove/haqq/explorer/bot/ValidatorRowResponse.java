@@ -1,16 +1,16 @@
 package com.stanislove.haqq.explorer.bot;
 
 public class ValidatorRowResponse {
-  private final NameAndValue moniker;
+  private final NameAndValue validatorAddress;
   private final NameAndValue tokens;
 
-  public ValidatorRowResponse(NameAndValue moniker, NameAndValue tokens) {
-    this.moniker = moniker;
+  public ValidatorRowResponse(NameAndValue validatorAddress, NameAndValue tokens) {
+    this.validatorAddress = validatorAddress;
     this.tokens = tokens;
   }
 
-  public NameAndValue getMoniker() {
-    return moniker;
+  public NameAndValue getValidatorAddress() {
+    return validatorAddress;
   }
 
   public NameAndValue getTokens() {
@@ -20,7 +20,7 @@ public class ValidatorRowResponse {
   @Override
   public String toString() {
     return String.format(
-        "%s: %s\n%s: %s", moniker.getName(), moniker.getValue(),
+        "%s: %s\n%s: %s", validatorAddress.getName(), validatorAddress.getValue(),
         tokens.getName(), tokens.getValue()
     );
   }
