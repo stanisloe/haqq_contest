@@ -2,6 +2,7 @@ package com.stanislove.haqq.explorer.bot;
 
 import static com.stanislove.haqq.explorer.bot.Command.SHOW_ACTIVE_VALIDATORS;
 import static com.stanislove.haqq.explorer.bot.Command.SHOW_TX_INFO;
+import static com.stanislove.haqq.explorer.bot.Command.SHOW_VALIDATOR_INFO;
 import static org.telegram.abilitybots.api.util.AbilityUtils.getChatId;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -90,7 +91,10 @@ public class HaqqExplorerHandler extends AbilityBot {
                 String tokens = new BigInteger(v.get("tokens").asText())
                     .divide(ISLM_DENOM)
                     .toString();
-                validators.add(new ValidatorRowResponse(moniker, tokens));
+                validators.add(new ValidatorRowResponse(
+                    new NameAndValue("Moniker", moniker),
+                    new NameAndValue("Delegation, ISLM", tokens)
+                ));
               });
 
               Lists.partition(validators, 50).forEach(batch -> {
@@ -116,30 +120,94 @@ public class HaqqExplorerHandler extends AbilityBot {
           silent.send("Enter tx hash", getChatId(u));
         })
         .onlyIf(u -> isUpdateFor(u, SHOW_TX_INFO))
-        .next(Reply.of((b, u) -> {
-          String txHash = u.getMessage().getText();
-          String url = apiHost + "/cosmos/tx/v1beta1/txs/" + txHash;
-          HttpGet request = new HttpGet(url);
-          JsonNode response = httpRequest(request);
-          final String message;
-          if (response.has("code")) {
-            message = "tx hash not found";
-          } else {
-            JsonNode messages = response.get("tx").get("body").get("messages");
-            message = Lists
-                .newArrayList(messages)
-                .stream()
-                .map(m -> Lists
-                    .newArrayList(m.fieldNames())
+        .next(Reply
+            .of((b, u) -> {
+              String txHash = u.getMessage().getText();
+              String url = apiHost + "/cosmos/tx/v1beta1/txs/" + txHash;
+              HttpGet request = new HttpGet(url);
+              JsonNode response = httpRequest(request);
+              final String message;
+              if (response.has("code")) {
+                message = "tx hash not found";
+              } else {
+                JsonNode messages = response.get("tx").get("body").get("messages");
+                message = Lists
+                    .newArrayList(messages)
                     .stream()
-                    .map(p -> p + " -> " + m.get(p).asText())
-                    .collect(Collectors.joining("\n"))
-                )
-                .collect(Collectors.joining());
-          }
-          silent.send(message, getChatId(u));
-          sendMainMenuMessage(u);
-        }))
+                    .map(m -> Lists
+                        .newArrayList(m.fieldNames())
+                        .stream()
+                        .map(p -> p + " -> " + m.get(p).asText())
+                        .collect(Collectors.joining("\n"))
+                    )
+                    .collect(Collectors.joining());
+              }
+              silent.send(message, getChatId(u));
+              sendMainMenuMessage(u);
+            })
+            .enableStats("Show Tx Info")
+        )
+        .build();
+  }
+
+  public Reply showValidatorInfo() {
+    return ReplyFlow
+        .builder(db)
+        .action((b, u) -> {
+          silent.send("Enter valoper address", getChatId(u));
+        })
+        .onlyIf(u -> isUpdateFor(u, SHOW_VALIDATOR_INFO))
+        .next(Reply
+            .of((b, u) -> {
+              String valoperAddress = u.getMessage().getText();
+              String url = apiHost + "/staking/validators/" + valoperAddress;
+              HttpGet request = new HttpGet(url);
+              JsonNode response = httpRequest(request);
+              final String message;
+              if (response.has("error")) {
+                message = "validator not found";
+              } else {
+                JsonNode result = response.get("result");
+                JsonNode description = result.get("description");
+                JsonNode commissionRates = result.get("commission").get("commission_rates");
+                List<NameAndValue> lines = new ArrayList<>();
+                String operatorAddress = result.get("operator_address").asText();
+                String moniker = description.get("moniker").asText();
+                String tokens = result.get("tokens").asText();
+                String details = description.get("details").asText();
+                String website = description.get("website").asText();
+                ValidatorStatus status = "3".equals(result.get("status").asText())
+                    ? ValidatorStatus.ACTIVE
+                    : ValidatorStatus.INACTIVE;
+                String isJailed = Boolean.toString(result.has("jailed"));
+                String rate = commissionRates.get("rate").asText();
+                String maxRate = commissionRates.get("max_rate").asText();
+                String maxChangeRate = commissionRates.get("max_change_rate").asText();
+
+                lines.add(new NameAndValue("Operator Address", operatorAddress));
+                lines.add(new NameAndValue("Moniker", moniker));
+
+                lines.add(new NameAndValue("Status", status.toString()));
+                lines.add(new NameAndValue("In Jail", isJailed));
+                lines.add(new NameAndValue("Tokens", tokens));
+
+                lines.add(new NameAndValue("Description", details));
+                lines.add(new NameAndValue("Website", website));
+
+                lines.add(new NameAndValue("Rate", rate));
+                lines.add(new NameAndValue("Max Rate", maxRate));
+                lines.add(new NameAndValue("Max Change Rate", maxChangeRate));
+
+                message = lines
+                    .stream()
+                    .map(String::valueOf)
+                    .collect(Collectors.joining("\n"));
+              }
+              silent.send(message, getChatId(u));
+              sendMainMenuMessage(u);
+            })
+            .enableStats("Sho Validator Info")
+        )
         .build();
   }
 
