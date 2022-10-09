@@ -193,8 +193,14 @@ public class HaqqExplorerHandler extends AbilityBot {
                 String operatorAddress = result.get("operator_address").asText();
                 String moniker = description.get("moniker").asText();
                 String tokens = result.get("tokens").asText();
-                String details = description.get("details").asText();
-                String website = description.get("website").asText();
+                String details = "";
+                if (description.has("details")) {
+                  details = description.get("details").asText();
+                }
+                String website = "";
+                if (description.has("website")) {
+                  website = description.get("website").asText();
+                }
                 ValidatorStatus status = "3".equals(result.get("status").asText())
                     ? ValidatorStatus.ACTIVE
                     : ValidatorStatus.INACTIVE;
