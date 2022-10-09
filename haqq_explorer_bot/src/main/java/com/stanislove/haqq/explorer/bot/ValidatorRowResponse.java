@@ -9,10 +9,18 @@ public class ValidatorRowResponse {
     this.tokens = tokens;
   }
 
+  public NameAndValue getMoniker() {
+    return moniker;
+  }
+
+  public NameAndValue getTokens() {
+    return tokens;
+  }
+
   @Override
   public String toString() {
     return String.format(
-        "%s: %s\n %s: %s", moniker.getName(), moniker.getValue(),
+        "%s: %s\n%s: %s", moniker.getName(), moniker.getValue(),
         tokens.getName(), tokens.getValue()
     );
   }

@@ -12,6 +12,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -85,28 +86,34 @@ public class HaqqExplorerHandler extends AbilityBot {
               String url = apiHost + "/staking/validators?status=BOND_STATUS_BONDED";
               HttpGet request = new HttpGet(url);
               JsonNode response = httpRequest(request);
-              List<ValidatorRowResponse> validators = new ArrayList<>();
-              response.get("result").elements().forEachRemaining(v -> {
-                String moniker = v.get("description").get("moniker").asText();
-                String tokens = new BigInteger(v.get("tokens").asText())
-                    .divide(ISLM_DENOM)
-                    .toString();
-                validators.add(new ValidatorRowResponse(
-                    new NameAndValue("Moniker", moniker),
-                    new NameAndValue("Delegation, ISLM", tokens)
-                ));
-              });
+              List<ValidatorRowResponse> validators = Lists
+                  .newArrayList(response.get("result").elements())
+                  .stream()
+                  .map(n -> {
+                    String moniker = n.get("description").get("moniker").asText();
+                    String tokens = new BigInteger(n.get("tokens").asText())
+                        .divide(ISLM_DENOM)
+                        .toString();
+                    return new ValidatorRowResponse(
+                        new NameAndValue("Moniker", moniker),
+                        new NameAndValue("Delegation, ISLM", tokens)
+                    );
+                  })
+                  .sorted((v1, v2) ->
+                      new BigInteger(v2.getTokens().getValue())
+                          .compareTo(new BigInteger(v1.getTokens().getValue()))
+                  )
+                  .collect(Collectors.toList());
 
               Lists.partition(validators, 50).forEach(batch -> {
                 String message = batch
                     .stream()
                     .map(String::valueOf)
-                    .collect(Collectors.joining("\n"));
+                    .collect(Collectors.joining("\n\n"));
                 silent.send(message, getChatId(u));
               });
 
               sendMainMenuMessage(u);
-
             },
             u -> isUpdateFor(u, SHOW_ACTIVE_VALIDATORS)
         )
