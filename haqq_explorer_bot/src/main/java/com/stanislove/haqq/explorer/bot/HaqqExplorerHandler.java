@@ -141,7 +141,6 @@ public class HaqqExplorerHandler extends AbilityBot {
         .onlyIf(u -> isUpdateFor(u, SHOW_TX_INFO))
         .next(Reply
             .of((b, u) -> {
-              silent.send(SHOW_TX_INFO.getText(), getChatId(u));
               String txHash = u.getMessage().getText();
               String url = apiHost + "/cosmos/tx/v1beta1/txs/" + txHash;
               HttpGet request = new HttpGet(url);
@@ -179,7 +178,6 @@ public class HaqqExplorerHandler extends AbilityBot {
         .onlyIf(u -> isUpdateFor(u, SHOW_VALIDATOR_INFO))
         .next(Reply
             .of((b, u) -> {
-              silent.send(SHOW_VALIDATOR_INFO.getText(), getChatId(u));
               String valoperAddress = u.getMessage().getText();
               String url = apiHost + "/staking/validators/" + valoperAddress;
               HttpGet request = new HttpGet(url);
@@ -235,7 +233,7 @@ public class HaqqExplorerHandler extends AbilityBot {
   private void sendMainMenuMessage(Update u) {
     SendMessage sendMessage = new SendMessage();
     sendMessage.setReplyMarkup(MAIN_MENU_KEYBOARD);
-    sendMessage.setText("Select an option");
+    sendMessage.setText("Select an option and start exploring");
     sendMessage.setChatId(getChatId(u));
     silent.execute(sendMessage);
   }
