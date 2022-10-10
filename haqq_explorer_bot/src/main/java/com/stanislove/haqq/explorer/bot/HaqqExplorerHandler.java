@@ -21,6 +21,8 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.HttpClients;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.telegram.abilitybots.api.bot.AbilityBot;
 import org.telegram.abilitybots.api.db.MapDBContext;
 import org.telegram.abilitybots.api.objects.Reply;
@@ -34,6 +36,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 public class HaqqExplorerHandler extends AbilityBot {
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
+  private static final Logger LOGGER = LoggerFactory.getLogger(HaqqExplorerHandler.class);
 
   private static final InlineKeyboardMarkup MAIN_MENU_KEYBOARD = Arrays
       .stream(Command.values())
@@ -254,7 +257,7 @@ public class HaqqExplorerHandler extends AbilityBot {
       HttpResponse response = client.execute(request);
       return MAPPER.readTree(response.getEntity().getContent());
     } catch (Exception e) {
-      System.out.println("Failed to execute request");
+      LOGGER.error("Failed to execute request", e);
       throw new RuntimeException(e);
     }
   }
