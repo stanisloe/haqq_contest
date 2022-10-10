@@ -65,6 +65,12 @@ Setup required `config.yml` fields like
 
 Optionally you can add telegram bot token to notify you once something is wrong: you miss blocks,
 got jailed or if one of archive nodes is down.
+```
+telegram:
+    enabled: yes
+    api_key: "your api key" # could be retrieved from telegram BotFather
+    channel: "your channel id" # use @JsonViewBot
+```
 
 Once config is ready run `docker-compose start`. Dashboard will be available at `localhost:8888`
 
